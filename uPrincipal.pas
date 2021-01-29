@@ -124,11 +124,16 @@ end;
 
 procedure TfrmVerificador.ExibirFranquiasNaVersao;
 var
-  I : Integer;
+  I              : Integer;
+  chave          : string;
+  idhost_versoes : TDictionary<string, TList<string>>;
+  naLista        : Boolean;
 begin
   ClientDataSet.EmptyDataSet;
 
   qyTbControleVersao.DisableControls;
+
+  idhost_versoes := TDictionary<string, TList<string>>.Create;
 
   for I := 0 to ListView.Items.Count - 1 do
   begin
@@ -140,10 +145,40 @@ begin
        begin
          if qyTbControleVersao.FieldByName('NUM_VERSAO').AsString = ListView.Items[I].Caption then
          begin
-            ClientDataSet.Insert;
-            ClientDataSet.FieldByName('ID_HOST'   ).AsString := qyTbControleVersao.FieldByName('ID_HOST').AsString;
-            ClientDataSet.FieldByName('NUM_VERSAO').AsString := qyTbControleVersao.FieldByName('NUM_VERSAO').AsString;
-            ClientDataSet.Post;
+           naLista := false;
+
+           if idhost_versoes.ContainsKey(qyTbControleVersao.FieldByName('NUM_VERSAO').AsString) then
+           begin
+              if idhost_versoes
+                 .Items[qyTbControleVersao.FieldByName('NUM_VERSAO').AsString]
+                 .Contains(qyTbControleVersao.FieldByName('ID_HOST').AsString) then
+              begin
+                naLista := true;
+              end
+              else
+              begin
+                 TList<string>(idhost_versoes
+                               .Items[qyTbControleVersao.FieldByName('NUM_VERSAO').AsString])
+                 .Add(qyTbControleVersao.FieldByName('ID_HOST').AsString);
+              end;
+           end
+           else
+           begin
+             idhost_versoes.Add(qyTbControleVersao.FieldByName('NUM_VERSAO').AsString,
+                                TList<string>.Create);
+
+             TList<string>(idhost_versoes
+                               .Items[qyTbControleVersao.FieldByName('NUM_VERSAO').AsString])
+                 .Add(qyTbControleVersao.FieldByName('ID_HOST').AsString);
+           end;
+
+           if (not naLista) then
+           begin
+             ClientDataSet.Insert;
+             ClientDataSet.FieldByName('ID_HOST'   ).AsString := qyTbControleVersao.FieldByName('ID_HOST').AsString;
+             ClientDataSet.FieldByName('NUM_VERSAO').AsString := qyTbControleVersao.FieldByName('NUM_VERSAO').AsString;
+             ClientDataSet.Post;
+           end;
          end;
 
          qyTbControleVersao.Next;
@@ -151,9 +186,16 @@ begin
      end;
   end;
 
-   qyTbControleVersao.First;
+  for chave in idhost_versoes.Keys do
+  begin
+    idhost_versoes.Items[chave].Free;
+  end;
 
-   qyTbControleVersao.EnableControls;
+  idhost_versoes.Free;
+
+  qyTbControleVersao.First;
+
+  qyTbControleVersao.EnableControls;
 end;
 
 procedure TfrmVerificador.FormClose(Sender: TObject; var Action: TCloseAction);
@@ -191,10 +233,15 @@ end;
 
 procedure TfrmVerificador.MontarQuantitativoFranquias;
 var
-  I        : Integer;
-  contador : Integer;
+  I              : Integer;
+  contador       : Integer;
+  chave          : string;
+  idhost_versoes : TDictionary<string, TList<string>>;
+  naLista        : Boolean;
 begin
    qyTbControleVersao.DisableControls;
+
+   idhost_versoes := TDictionary<string, TList<string>>.Create;
 
    mmoQuantitativos.Clear;
 
@@ -203,19 +250,58 @@ begin
      if ListView.Items[I].Checked then
      begin
        qyTbControleVersao.First;
+
        contador := 0;
 
        while not qyTbControleVersao.Eof do
        begin
          if qyTbControleVersao.FieldByName('NUM_VERSAO').AsString = ListView.Items[I].Caption then
-           Inc(contador);
+         begin
+           naLista := false;
 
-         qyTbControleVersao.Next;
-       end;
+           if idhost_versoes.ContainsKey(qyTbControleVersao.FieldByName('NUM_VERSAO').AsString) then
+           begin
+              if idhost_versoes
+                 .Items[qyTbControleVersao.FieldByName('NUM_VERSAO').AsString]
+                 .Contains(qyTbControleVersao.FieldByName('ID_HOST').AsString) then
+              begin
+                naLista := true;
+              end
+              else
+              begin
+                 TList<string>(idhost_versoes
+                               .Items[qyTbControleVersao.FieldByName('NUM_VERSAO').AsString])
+                 .Add(qyTbControleVersao.FieldByName('ID_HOST').AsString);
+              end;
+           end
+           else
+           begin
+             idhost_versoes.Add(qyTbControleVersao.FieldByName('NUM_VERSAO').AsString,
+                                TList<string>.Create);
+
+             TList<string>(idhost_versoes
+                               .Items[qyTbControleVersao.FieldByName('NUM_VERSAO').AsString])
+                 .Add(qyTbControleVersao.FieldByName('ID_HOST').AsString);
+           end;
+
+           if (not naLista) then
+             Inc(contador);
+           end;
+
+           qyTbControleVersao.Next;
+         end;
 
        mmoQuantitativos.Lines.Add('versão ' + ListView.Items[I].Caption + ': ' + IntToStr(contador) + ' franquia(s).');
      end;
    end;
+
+
+   for chave in idhost_versoes.Keys do
+   begin
+      idhost_versoes.Items[chave].Free;
+   end;
+
+   idhost_versoes.Free;
 
    qyTbControleVersao.First;
 
